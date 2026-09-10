@@ -14,7 +14,17 @@ public class WaveSpawner : MonoBehaviour {
 	public TextMeshProUGUI waveCountdownText;
 	public TextMeshProUGUI statusText;
 	public GameManager gameManager;
-	private int waveIndex = 0; 
+	private int waveIndex = 0;
+
+	// EnemiesAlive is static, so it outlives the scene. Enemies still on the map
+	// when the player retries are destroyed by the scene unload without ever
+	// running Die() or EndPath(), leaving the count permanently above zero -- at
+	// which point Update() below returns on every frame and no wave ever starts
+	// again. Clearing it here is what makes Retry actually work.
+	void Start ()
+	{
+		EnemiesAlive = 0;
+	}
 
 	void Update ()
 	{

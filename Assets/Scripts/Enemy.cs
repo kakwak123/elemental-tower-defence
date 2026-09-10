@@ -23,8 +23,13 @@ public class Enemy : MonoBehaviour {
 
 	private bool isDead = false;
 	private bool isOnFire = false;
-	private float bulletSlowTimer;
-	private float bulletSlowDuration;
+
+	// Slows are modelled as a single effect with a strength and a remaining
+	// lifetime. Continuous sources (the laser) refresh it every frame; one-shot
+	// sources (ice bullets) set a real duration. See ApplySlow.
+	private const float ContinuousSlowRefresh = 0.15f;
+	private float slowFactor = 0f;
+	private float slowRemaining = 0f;
 
 	private float timeCounter = 0;
 	private float burnDamage = 0;
@@ -48,17 +53,35 @@ public class Enemy : MonoBehaviour {
 		}
 	}
 
+	// Called every frame by a turret that is currently beaming this enemy.
+	// The short refresh window keeps the slow alive while the beam holds and
+	// lets it lapse shortly after the beam breaks off.
 	public void Slow (float pct)
 	{
-		speed = startSpeed * (1f - pct);
+		ApplySlow(pct, ContinuousSlowRefresh);
 	}
 
-    public void IceBulletSlow(float pct, float duration)
+	public void IceBulletSlow(float pct, float duration)
 	{
-		speed = startSpeed * (1f - pct);
-		bulletSlowDuration = duration;
-		bulletSlowTimer = 0.0f;
-    }
+		ApplySlow(pct, duration);
+	}
+
+	// The strongest active slow wins. A weaker source cannot shorten or weaken
+	// a stronger one that is still running, but may take over once it lapses.
+	private void ApplySlow (float pct, float duration)
+	{
+		if (pct > slowFactor || slowRemaining <= 0f)
+		{
+			slowFactor = pct;
+			slowRemaining = duration;
+		}
+		else if (Mathf.Approximately(pct, slowFactor))
+		{
+			slowRemaining = Mathf.Max(slowRemaining, duration);
+		}
+
+		speed = startSpeed * (1f - slowFactor);
+	}
 
 	public void setOnFire(float damage)
 	{
@@ -82,29 +105,54 @@ public class Enemy : MonoBehaviour {
 			if (health <= 0 && !isDead)
 			{
 				Die();
-				Destroy(onFireEffect);
+				return;
 			}
 			timeCounter = 0.0f;
 		}
-        if (bulletSlowTimer >= bulletSlowDuration)
-        {
-			speed = startSpeed;
-        }
+
+		// Only expire a slow that is actually running. The previous version reset
+		// speed whenever timer >= duration, which was true from frame one for
+		// every enemy and silently cancelled the laser's slow each frame.
+		if (slowRemaining > 0f)
+		{
+			slowRemaining -= Time.deltaTime;
+
+			if (slowRemaining <= 0f)
+			{
+				slowFactor = 0f;
+				speed = startSpeed;
+			}
+		}
 
 		timeCounter += Time.deltaTime;
-		bulletSlowTimer += Time.deltaTime;
 	}
 
     IEnumerator putOutFire()
     {
 		yield return new WaitForSeconds(5.0f);
-		Destroy(onFireEffect);
+
+		if (onFireEffect != null)
+		{
+			Destroy(onFireEffect);
+			onFireEffect = null;
+		}
+
 		isOnFire = false;
 	}
 
 	void Die ()
 	{
 		isDead = true;
+
+		// Every death path has to release the flame effect, not just the burn
+		// tick. An enemy set alight and then shot used to orphan this object in
+		// the scene forever.
+		if (onFireEffect != null)
+		{
+			Destroy(onFireEffect);
+			onFireEffect = null;
+		}
+
 		Instantiate(dropItem, transform.position, Quaternion.identity);
 		PlayerStats.Money += worth;
 
