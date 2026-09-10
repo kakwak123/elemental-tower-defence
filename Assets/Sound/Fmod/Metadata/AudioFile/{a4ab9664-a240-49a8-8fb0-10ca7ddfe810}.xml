@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.00.00">
+	<object class="AudioFile" id="{a4ab9664-a240-49a8-8fb0-10ca7ddfe810}">
+		<property name="assetPath">
+			<value>[INSTRUMENTAL] Block B (블락비) YESTERDAY (Special Single).mp3</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>44.0999985</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>174.1322448979592</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{f4a91d83-6ff3-4add-aff5-a933de57169a}</destination>
+		</relationship>
+	</object>
+</objects>
