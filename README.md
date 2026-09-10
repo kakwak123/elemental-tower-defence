@@ -250,14 +250,33 @@ project. The evaluation said it was not working, and the evaluation won.
 
 ## Known issues
 
-Carried over honestly from the original submission:
+Open, carried over from the original submission:
 
 - Audio does not work on macOS.
 - Turret upgrades have no keyboard shortcuts; they are mouse-only.
-- The laser turret's slow effect does not reliably apply — its per-frame slow is
-  cancelled by an unconditional speed reset in `Enemy.Update()`.
-- A burning enemy killed by something other than the burn tick leaks its flame
-  particle effect into the scene.
+- Game state lives in mutable `static` fields (`PlayerStats.Money` / `.Lives` /
+  `.Rounds`, `WaveSpawner.EnemiesAlive`, `Waypoints.points`,
+  `GameManager.GameIsOver`). These outlive scene loads, which is a standing
+  hazard rather than a specific bug — it is what made the retry soft-lock below
+  possible.
+
+### Fixed since the submission
+
+Found by reading the source rather than by playing, and **not yet confirmed in
+the Editor** — see the commit messages:
+
+- **Retry soft-locked the game.** `WaveSpawner.EnemiesAlive` is static and was
+  never reset, so enemies destroyed by a scene reload left the count above zero
+  permanently and no wave ever spawned again after a retry.
+- **The laser turret's slow never applied.** An unconditional speed reset in
+  `Enemy.Update()` was true from every enemy's first frame and cancelled it.
+- **Burning enemies leaked their flame effect** when killed by anything other
+  than the burn tick.
+- **The HUD allocated a string every frame** for values that change a few times
+  per wave.
+- **The fog shader had no render queue tags** and accumulated its scroll offset
+  in `fixed` precision; the rim light was computed per-vertex, making it
+  faceted on low-poly meshes.
 
 ## Credits
 
